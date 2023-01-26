@@ -1,0 +1,11 @@
+Test file generated as below:
+
+rusi2317@fiji-1.colorado.edu$ cat ../../processed_data/final_counts/genes_bidirectionals_tpm_samples.tsv | grep -w 'chr1' | head -20 > test_head_tpm.tsv
+rusi2317@fiji-1.colorado.edu$ cat ../../processed_data/final_counts/genes_bidirectionals_tpm_samples.tsv | grep -w 'chr1' | tail -20 > test_tail_tpm.tsv
+rusi2317@fiji-1.colorado.edu$ cat ../../processed_data/final_counts/genes_bidirectionals_tpm_samples.tsv | grep 'Geneid' > test_names.tsv
+rusi2317@fiji-1.colorado.edu$ cat test_names.tsv test_head_tpm.tsv test_tail_tpm.tsv > test.tsv
+
+Test file for tissue specific comparisons
+zcat ../../../processed_data/final_counts/genes_5ptrunc_bidirectionals_tpm500bp_promoters_samples.tsv.gz | grep 'GeneID\|ZZZ3\|chr1-77560995-77561253-tfit\|ANKRD35\|chr1-145129150-145129348-tfit,dreg\|ZSWIM5\|chr1-45207903-45208533-tfit\|CAP1\|chr1-39809910-39810316-tfit' > test_tpms_samples.tsv
+
+zcat /scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/processed_data/final_counts/genes_5ptrunc_bidirectionals_tpm500bp_promoters.tsv.gz | grep 'SRZ\|ZZZ3\|chr1-77560995-77561253-tfit\|ANKRD35\|chr1-145129150-145129348-tfit,dreg\|ZSWIM5\|chr1-45207903-45208533-tfit\|CAP1\|chr1-39809910-39810316-tfit' | grep -v 'chr12\|chr17' > test_tpms_samples.tsv
