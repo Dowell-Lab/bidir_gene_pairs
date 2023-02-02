@@ -9,8 +9,8 @@
 #SBATCH --time=00:05:00 # Time limit                                                                                                                
 #SBATCH --partition short                                                                                                                                        
 #SBATCH --mem=5mb # Memory                                                                                                                                 
-#SBATCH --output=/scratch/Users/rusi2317/e_and_o/%x_%j.out                                                                                                           
-#SBATCH --error=/scratch/Users/rusi2317/e_and_o/%x_%j.err                                                                  
+#SBATCH --output=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/scripts/bidir_gene_pairs/test/e_and_o/%x_%j.out                                                                                                           
+#SBATCH --error=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/scripts/bidir_gene_pairs/test/e_and_o/%x_%j.err                                                                  
 
 echo "BEGIN: Correlations..................."
 

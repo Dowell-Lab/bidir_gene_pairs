@@ -8,9 +8,9 @@
 #SBATCH --ntasks=1 # Num of CPU                                                                                                  
 #SBATCH --time=00:10:00 # Time limit                                                                                                                
 #SBATCH --partition short                                                                                                                                        
-#SBATCH --mem=1gb # Memory                                                                                                                                 
-#SBATCH --output=/scratch/Users/rusi2317/e_and_o/%x_%j.out                                                                                                           
-#SBATCH --error=/scratch/Users/rusi2317/e_and_o/%x_%j.err                                                                  
+#SBATCH --mem=10mb # Memory                                                                                                                                 
+#SBATCH --output=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/scripts/bidir_gene_pairs/test/e_and_o/%x_%j.out                                                                                                           
+#SBATCH --error=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/scripts/bidir_gene_pairs/test/e_and_o/%x_%j.err                                                                  
 
 echo "BEGIN: Correlations..................."
 
@@ -19,17 +19,17 @@ echo "BEGIN: Correlations..................."
 WD=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/scripts/bidir_gene_pairs
 
 #input to filtering script
-FILT_CORR=${WD}/R/filter_pairs_by_tissues.R
-TPMS=${WD}/test/test_tpms_samples.tsv
+FILT_CORR=${WD}/R/filter_significant_pairs.R #filter_pairs_by_tissues.R
 OUT=${WD}/test/
-META=${WD}/test/20211026_db_output_tissues.csv
 CORR=${WD}/test/out_tissues
+CORR_ALL=${WD}/test/out_allsamples
 
 ANNOTATIONS=${WD}/test/test_chroms.tsv
 
 ##################################
 #run script
 
-Rscript --vanilla ${FILT_CORR} -t ${TPMS} -m ${META} -c ${ANNOTATIONS} -r ${CORR} -o ${OUT}
+Rscript --vanilla ${FILT_CORR} -c ${ANNOTATIONS} -r ${CORR} -o ${OUT} -t
+Rscript --vanilla ${FILT_CORR} -c ${ANNOTATIONS} -r ${CORR_ALL} -o ${OUT}
 
 echo "DONE: Matrix pearson correlation......"

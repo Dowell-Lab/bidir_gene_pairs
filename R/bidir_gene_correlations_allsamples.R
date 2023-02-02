@@ -44,10 +44,142 @@ print(paste("Chromosome File   :", as.character(opt$chr)))
 print(paste("Output Directory  :", as.character(opt$out)))
 print(paste("Number of Samples :", as.character(nsamples)))
 
+##long format of pairwise matrix matrix 
+restructure_cor_matrix <- function(matrix){
+    
+    #' get long format for matrix output from WGCNAs corAndPvalue() function
+    #' 
+    #' @description Summarize the matrix in 'transcript1, transcript2, value' 
+    #' format
+    #' 
+    #' @param matrix : pairwise comparisons in matrix format
+    #'
+    #'
+    #' @usage restructure_cor_matrix(matrix)
+    #' @return A tibble with values for pairs from matrix
+    #' @export
+    
+    #convert to dataframe
+    matrix_df <- as.data.frame(matrix)
+    matrix_df$transcript_1 <- colnames(matrix_df)
+    
+    #change the structure of the dataframe to 3 column dataframe
+    #> transcript_1, transcript_2, coefficient
+    matrix_df_long <- matrix_df %>% tidyr::pivot_longer(!transcript_1, 
+                                                        names_to = "transcript_2", 
+                                                        values_to = "value",
+                                                        values_drop_na = TRUE)
+    
+    #remove same pair correlations
+    matrix_df_unique <- subset(matrix_df_long, 
+                               transcript_1 != transcript_2)
+    
+    #remove NA comparisons (these are transcripts not in all samples)
+    matrix_df_noNA <- subset(matrix_df_unique, 
+                             !is.na(matrix_df_unique[[3]]))
+    
+    matrix_df_noNA$pair_id <- paste0(matrix_df_noNA$transcript_1,':',
+                                     matrix_df_noNA$transcript_2)
+    
+    print(dim(matrix_df_noNA))
+    return(matrix_df_noNA)
+    
+}
+
+##combine correlation outputs 
+cor_summary_stats <- function(corAndPvalueOut_list) {
+    
+    #' get summary from corAndPvalue() output tibble list 
+    #' takes output from restructure_cor_matrix() function
+    #'
+    #' @description All corAndPvalue() statistics in a single tibble 
+    #' 
+    #' 
+    #' @param corAndPvalueOut_list: list of matrix for pairwise comparisons with summary stats
+    #'
+    #'
+    #' @usage cor_summary_stats(list_of_tibbles)
+    #' @return A tibble with values for pairs from matrix list
+    #' @export
+    
+    ##summary table with all the statistics
+    ##combined as shown below
+    corAndPvalueOut_tibble <- purrr::reduce(list(corAndPvalueOut_list$cor,
+                                              corAndPvalueOut_list$p[c(3,4)],
+                                              corAndPvalueOut_list$t[c(3,4)],
+                                              corAndPvalueOut_list$nObs[c(3,4)]),
+                                         dplyr::left_join, by = 'pair_id')
+    ##renaming column names
+    corAndPvalueOut_tibble <- corAndPvalueOut_tibble %>% dplyr::rename("pcc" ="value.x",
+                                                             "pval" ="value.y",
+                                                              "t"="value.x.x",
+                                                              "nObs"="value.y.y")
+    
+    ##calculating the adjusted p-values
+    corAndPvalueOut_tibble$adj_p_BH <- p.adjust(corAndPvalueOut_tibble$pval,
+                                                      method = 'BH')
+    
+    ##rearrange columns
+    corAndPvalueOut_tibble <- corAndPvalueOut_tibble %>% dplyr::relocate(pcc,
+                                                                         .after = pair_id)
+    corAndPvalueOut_tibble <- corAndPvalueOut_tibble %>% dplyr::relocate(adj_p_BH,
+                                                                         .after = pcc)
+    return(corAndPvalueOut_tibble)   
+    
+}
+
+##get mnetadata for pairs 
+cor_pair_metadata <- function(tpm_filtered_chrm, corAndPvalueOut_tibble) {
+    
+    #' get metadata for all pairs
+    #'
+    #' @description Take tpm input file with metadata and the single tibble 
+    #' file with correlations summary stats and combines to give a unified
+    #' table with all information
+    #' 
+    #' @param tpm_filtered_chrm : TPMs in a modified SAF format
+    #'
+    #' @param corAndPvalueOut_tibble : tibble file with corr and p-values
+    #'
+    #'
+    #' @usage cor_summary_stats(list_of_tibbles)
+    #' @return A tibble with values for pairs from matrix list
+    #' @export
+    
+    transcript_coords <- tpm_filtered_chrm[c(1,3,4,6)]
+
+    # subset transcript 1 coordinate data
+    transcript1_choords <- transcript_coords[transcript_coords$Geneid %in% corAndPvalueOut_tibble$transcript_1,]
+    colnames(transcript1_choords)[2:4] <- c("transcript1_start","transcript1_end","transcript1_biotype")
+
+    # subset transcript 2 coordinate data
+    transcript2_choords <- transcript_coords[transcript_coords$Geneid %in% corAndPvalueOut_tibble$transcript_2,]
+    colnames(transcript2_choords)[2:4] <- c("transcript2_start","transcript2_end","transcript2_biotype")
+
+    # combine transcript coordinates with correlations
+    corAndPvalueOut_transcript1 <- dplyr::left_join(corAndPvalueOut_tibble,
+                                             transcript1_choords,
+                                             by = c("transcript_1"="Geneid"))
+
+    corAndPvalueOut_transcript1and2 <- dplyr::left_join(corAndPvalueOut_transcript1,
+                                                transcript2_choords,
+                                                by = c("transcript_2"="Geneid"))
+
+    corAndPvalueOut_transcript1and2$distance <- corAndPvalueOut_transcript1and2$transcript2_start - corAndPvalueOut_transcript1and2$transcript1_start
+
+    # remove redundant pairs and only report unique Gene-Bidirectional correlations
+    corAndPvalueOut_gene_bidirs <- subset(corAndPvalueOut_transcript1and2, 
+                                      transcript1_biotype == 'Gene' & 
+                                      transcript2_biotype != 'Gene') 
+    
+    return(corAndPvalueOut_gene_bidirs)
+    
+}
+
+
 ##############################################
 ##matrix correlation by chromosome function ##
 ##############################################
-
 transcript_pearsons_by_chromosome <- function(chromosome){
     
     #' calculate pearson's correlations for all transcripts in input
@@ -75,113 +207,37 @@ transcript_pearsons_by_chromosome <- function(chromosome){
     
     #log transform the normalized tpm counts(base 10)
     ##NOTE: running with adding 1s and converting 0s to NA
-    #tpms_chrm_log10 <- log(tpms_chrm_t, base=10)
+    #tpms_chrm_log10 <- log(tpms_chrm_t, base=10) ##original running process
     tpms_chrm_log10 <- log(tpms_chrm_t+1, base=10)
 
-    ##NOTE: to run correlations on all pairs ignoring the 
-    ##just samples with missing data, convert -Inf from 
-    ##the above log to NAs
-    #tpms_chrm_log10_NAs <- dplyr::na_if(tpms_chrm_log10, -Inf)
+    ##NOTE: running correlations on pairs BUT ignoring the 
+    ##samples with missing data
     tpms_chrm_log10_NAs <- dplyr::na_if(tpms_chrm_log10, 0)
 
-    ####################################################
-    ##R values                                        ##
-    ####################################################
-    #calculate the R value from pearsons correlation
-    #also constrict the that the samples used have all transcripts transcribed 
-    ## To be revisited, as there could be cell type specific correlations ...
-    pearsons_R <- WGCNA::cor(tpms_chrm_log10_NAs, use = "pairwise.complete.obs")
+    ########################################################
+    ##Using WGCNA calculate correlations and p-values for ##
+    ##relavant samples with trancriptio                   ##
+    ########################################################
+    ##calculated pcc, pvalue, z stat, t stat and number of observations (i.e.)
+    ##samples with both genes and bidirectionals transcribed         
+    corAndPvalueOut <- WGCNA::corAndPvalue(tpms_chrm_log10_NAs, 
+                                           use="pairwise.complete.obs")
     
-    #convert the correlation matrix to dataframe
-    #this makes it easy to restructure the output
-    pearsons_R_df <- as.data.frame(pearsons_R)
-    pearsons_R_df$transcript_1 <- rownames(pearsons_R_df) #add rownames (same as colnames)
+    ##restructure all the matrix outputs long formats 
+    corAndPvalueOut_matrix_list <- lapply(corAndPvalueOut, restructure_cor_matrix)
     
-    #change the structure of the dataframe to 3 column dataframe
-    #> transcript_1, transcript_2, coefficient
-    pearsons_R_long <- pearsons_R_df %>% tidyr::pivot_longer(!transcript_1, 
-                                                             names_to = "transcript_2", 
-                                                             values_to = "coefficient",
-							     values_drop_na = TRUE)
+    ##combine all summary stats all in one tibble
+    corAndPvalueOut_all_tibble <- cor_summary_stats(corAndPvalueOut_matrix_list)
     
-    #remove same pair correlations
-    pearsons_R_long_unique <- subset(pearsons_R_long, 
-                                     transcript_1 != transcript_2)
+    ##remove redundant pairs and add metadata
+    ##bidir and gene pair ids, distances 
+    corAndPvalueOut_pairs <- cor_pair_metadata(tpms_chrm, corAndPvalueOut_all_tibble)
+
+    ##add sample summary of counts
+    corAndPvalueOut_pairs$tissue <- "All_samples"
+    corAndPvalueOut_pairs$percent_transcribed_both <- (corAndPvalueOut_pairs$nObs/(nsamples-6))*100
     
-    #remove NA comparisons (these are transcripts not in all samples)
-    pearsons_R_long_unique_noNA <- subset(pearsons_R_long_unique, 
-                                          !is.na(pearsons_R_long_unique[[3]]))
     
-    pearsons_R_long_unique_noNA$pair_id <- paste0(pearsons_R_long_unique_noNA$transcript_1,
-                                              ':',
-                                              pearsons_R_long_unique_noNA$transcript_2)
-    
-    ####################################################
-    ##P-values                                        ##
-    ####################################################
-    #Calculate p-values
-    pearsons_pval <- WGCNA::corPvalueStudent(pearsons_R, nsamples)
-    
-    #converting matrix to dataframe for easy wrangling
-    pearsons_pval_df <- as.data.frame(pearsons_pval)
-    pearsons_pval_df$transcript_1 <- rownames(pearsons_pval_df)
-
-    #pivot the dataframe structure
-    pearsons_pval_long <- pearsons_pval_df %>% tidyr::pivot_longer(!transcript_1, 
-                                 names_to = "transcript_2", 
-                                 values_to = "p_value",
-				 values_drop_na = TRUE)
-
-    #remove same pair correlations
-    pearsons_pval_long_unique <- subset(pearsons_pval_long, 
-                                        transcript_1 != transcript_2)
-
-    #remove NA comparisons (these are transcripts not in all samples)
-    pearsons_pval_long_unique_noNA <- subset(pearsons_pval_long_unique, 
-                                          !is.na(pearsons_pval_long_unique[[3]]))
-
-    pearsons_pval_long_unique_noNA$pair_id <- paste0(pearsons_pval_long_unique_noNA$transcript_1,
-                                              ':',
-                                              pearsons_pval_long_unique_noNA$transcript_2)
-    
-    #####################################################
-    #Final dataframe with both R values and p-values   ##
-    #####################################################
-    pearsons_Rpval_long_unique_noNA <- dplyr::left_join(pearsons_R_long_unique_noNA, 
-                                                    pearsons_pval_long_unique_noNA[c(3,4)],
-                                                    by = "pair_id")
-
-    pearsons_Rpval_long_unique_noNA$adj_p_BH <- p.adjust(pearsons_Rpval_long_unique_noNA$p_value,
-                                                      method = 'BH')
-
-    #add distance calculations
-    
-    transcript_coords <- tpms_chrm[c(1,3,4,6)]
-
-    # subset transcript 1 coordinate data
-    transcript1_choords <- transcript_coords[transcript_coords$Geneid %in% pearsons_Rpval_long_unique_noNA$transcript_1,]
-    colnames(transcript1_choords)[2:4] <- c("transcript1_start","transcript1_end","transcript1_biotype")
-
-    # subset transcript 2 coordinate data
-    transcript2_choords <- transcript_coords[transcript_coords$Geneid %in% pearsons_Rpval_long_unique_noNA$transcript_2,]
-    colnames(transcript2_choords)[2:4] <- c("transcript2_start","transcript2_end","transcript2_biotype")
-
-    # combine transcript coordinates with correlations
-    pearsons_Rpval_txpt1_coord <- dplyr::left_join(pearsons_Rpval_long_unique_noNA,
-                                                    transcript1_choords,
-                                                    by = c("transcript_1"="Geneid"))
-
-    pearsons_Rpval_txpt_coord <- dplyr::left_join(pearsons_Rpval_txpt1_coord,
-                                                    transcript2_choords,
-                                                    by = c("transcript_2"="Geneid"))
-
-    pearsons_Rpval_txpt_coord$distance <- pearsons_Rpval_txpt_coord$transcript2_start - pearsons_Rpval_txpt_coord$transcript1_start
-
-    # remove redundant pairs and only report unique Gene-Bidirectional correlations
-    pearsons_Rpval_txpt_coord_pairs <- subset(pearsons_Rpval_txpt_coord, 
-						transcript1_biotype == 'Gene' & 
-    			      	 		transcript2_biotype != 'Gene')   
- 
     #saving the final dataframes
     #including date and chromosome ids to the file names
     outdir <- output_folder 
@@ -191,17 +247,11 @@ transcript_pearsons_by_chromosome <- function(chromosome){
                          chromosome,
                          '_',
                          Sys.Date(),
-                         '.txt' )
+                         '.tsv.gz' )
     
-    write.table(pearsons_Rpval_txpt_coord_pairs, #pearsons_Rpval_long_unique_noNA, 
-                final_path,
-                sep='\t',
-                quote = FALSE,
-                row.names=FALSE)
-
-    #system("gzip final_path")
-    system(sprintf("gzip %s", final_path))
-    
+    data.table::fwrite(corAndPvalueOut_pairs,
+                       final_path,
+                       sep='\t')
 }
 
 chromosome_list <- as.character(chroms$V1) 
