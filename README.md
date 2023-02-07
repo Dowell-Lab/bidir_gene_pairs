@@ -1,11 +1,20 @@
 # bidir_gene_pairs
-Bidirectional transcript and gene pairs derived from nascent RNA data
+Bidirectional transcript and gene pairs derived from nascent RNA data:
+
+## Requirements
+
+- parallel
+- optparse version 1.7.3        
+- data.table version 1.14.2     
+- tidyr version 1.2.1          
+- dplyr version 1.0.10         
+- WGCNA version 1.70-3          
+
+## Running in the command line
 
 See `test` folder to see example input and output.
 
-Scripts:
-
-- `bidir_gene_correlations_allsamples.R`
+### `bidir_gene_correlations_allsamples.R`
 
 Calculated correlations beatween gene and bidirectional transcription using all samples.
 
@@ -28,7 +37,7 @@ Options:
 		Show this help message and exit
 ```
 
-- `bidir_gene_correlations_tissues.R`
+###`bidir_gene_correlations_tissues.R`
 
 Calculated correlations beatween gene and bidirectional transcription using specific *Tissues*.
 
@@ -57,7 +66,7 @@ Options:
 ```
 
 
-- `filter_significant_pairs.R`
+### `filter_significant_pairs.R`
 
 Takes input from `bidir_gene_correlations_tissues.R` and `bidir_gene_correlations_allsamples.R`. Filtering is done based on:
 
