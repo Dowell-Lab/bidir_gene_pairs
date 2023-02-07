@@ -37,7 +37,7 @@ Options:
 		Show this help message and exit
 ```
 
-###`bidir_gene_correlations_tissues.R`
+### `bidir_gene_correlations_tissues.R`
 
 Calculated correlations beatween gene and bidirectional transcription using specific *Tissues*.
 
