@@ -16,16 +16,16 @@ Usage: bidir_gene_correlations_allsamples.R [options]
 
 Options:
 	-t CHARACTER, --tpms=CHARACTER
-	   path to TPM normalized counts
+		path to TPM normalized counts
 
-	   -c CHARACTER, --chr=CHARACTER
-	      chromosome file for processing
+	-c CHARACTER, --chr=CHARACTER
+		chromosome file for processing
 
-	      -o CHARACTER, --out=CHARACTER
-	      	 path to output directory [default= ./]
+	-o CHARACTER, --out=CHARACTER
+		path to output directory [default= ./]
 
-		 -h, --help
-		     Show this help message and exit
+	-h, --help
+		Show this help message and exit
 ```
 
 - `bidir_gene_correlations_tissues.R`
@@ -41,65 +41,60 @@ Usage: bidir_gene_correlations_tissues.R [options]
 
 Options:
 	-t CHARACTER, --tpms=CHARACTER
-	   path to TPM normalized counts
+		path to TPM normalized counts
 
-	   -m CHARACTER, --samplemeta=CHARACTER
-	      path to metadata table for all samples
+	-m CHARACTER, --samplemeta=CHARACTER
+		path to metadata table for all samples
 
-	      -c CHARACTER, --chr=CHARACTER
-	      	 chromosome file for processing
+	-c CHARACTER, --chr=CHARACTER
+		chromosome file for processing
 
-		 -o CHARACTER, --out=CHARACTER
-		    path to output directory [default= ./]
+	-o CHARACTER, --out=CHARACTER
+		path to output directory [default= ./]
 
-		    -h, --help
-		    	Show this help message and exit
+	-h, --help
+		Show this help message and exit
 ```
 
 
-- `filter_pairs_by_tissues.R`
+- `filter_significant_pairs.R`
 
-Takes input from `bidir_gene_correlations_tissues.R` abd filters pairs by chromosomes. Filtering is done based on:
+Takes input from `bidir_gene_correlations_tissues.R` and `bidir_gene_correlations_allsamples.R`. Filtering is done based on:
 
 1. Adjusted p-value : 0.01
-2. Pearson correlation coefficient (PCC) : >/< 0.9
-3. Percent of samples with transcription : > 75%
+2. Pearson correlation coefficient (PCC) : >/< 0.6
+3. Percent of samples with transcription : > 5%
 
 ```
-Rscript --vanilla filter_pairs_by_tissues.R -h
-Usage: filter_pairs_by_tissues.R [options]
-
+Rscript --vanilla filter_significant_pairs.R -h
+Usage: filter_significant_pairs.R [options]
 
 Options:
-	-t CHARACTER, --tpms=CHARACTER
-	   path to TPM normalized counts
+	-r CHARACTER, --correlations=CHARACTER
+		path to chromosome level correnations from bidir_gene_correlations_allsamples.R or  bidir_gene_correlations_tissues.R
 
-	   -m CHARACTER, --samplemeta=CHARACTER
-	      path to metadata table for all samples
+	-c CHARACTER, --chr=CHARACTER
+		chromosome file for processing
 
-	      -r CHARACTER, --correlations=CHARACTER
-	      	 path to chromosome level correnations from nascent_transcripts_pearsons_corr.R
+	-d INTEGER, --min_dist=INTEGER
+		minimum distance between pairs [default = 1000000 bases]
 
-		 -c CHARACTER, --chr=CHARACTER
-		    chromosome file for processing
+	-e INTEGER, --percent_trans=INTEGER
+		percent of sample with transcription for transcript [default = 5]
 
-		    -d INTEGER, --min_dist=INTEGER
-		       minimum distance between pairs [default = 1000000 bases]
+	-v DOUBLE, --rvalue=DOUBLE
+		pearson's R value cut-off [default = 0.6 ]
 
-		       -e INTEGER, --percent_trans=INTEGER
-		       	  percent of sample with transcription for transcript [default = 25]
+	-p DOUBLE, --adj_pvalue=DOUBLE
+		adjusted p-value filter for called pairs [default = 0.01 ]
 
-			  -v DOUBLE, --rvalue=DOUBLE
-			     pearson's R value cut-off [default = 0.9 ]
+	-o CHARACTER, --out=CHARACTER
+		path to output directory [default= ./]
 
-			     -p DOUBLE, --adj_pvalue=DOUBLE
-			     	adjusted p-value filter for called pairs [default = 0.001 ]
+	-t, --tissue
+		Are the correlations based on a per-tissue and per-chromosome basis? [default = FALSE]
 
-				-o CHARACTER, --out=CHARACTER
-				   path to output directory [default= ./]
-
-				   -h, --help
-				       Show this help message and exit
-
+	-h, --help
+		Show this help message and exit
 
 ```
