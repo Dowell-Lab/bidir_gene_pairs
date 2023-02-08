@@ -178,12 +178,21 @@ cor_pair_metadata <- function(tpm_filtered_chrm, corAndPvalueOut_tibble) {
                                                 transcript2_choords,
                                                 by = c("transcript_2"="Geneid"))
     
-    corAndPvalueOut_transcript1and2$distance <- corAndPvalueOut_transcript1and2$transcript2_start - corAndPvalueOut_transcript1and2$transcript1_start
-
     # remove redundant pairs and only report unique Gene-Bidirectional correlations
-    corAndPvalueOut_gene_bidirs <- subset(corAndPvalueOut_transcript1and2, 
-                                      transcript1_biotype == 'Gene' & 
-                                      transcript2_biotype != 'Gene') 
+    # now transcript_1 are Genes and transcript_2 are Bidirectionals
+    corAndPvalueOut_gene_bidirs <- subset(corAndPvalueOut_transcript1and2,
+                                      transcript1_biotype == 'Gene' &
+                                      transcript2_biotype != 'Gene')
+
+    # Now calculating the distance between genes and bidirectionals 				      
+    # relative center position of the bidirectional transcript
+    bidir_center_pos <- (corAndPvalueOut_gene_bidirs$transcript2_end - corAndPvalueOut_gene_bidirs$transcript2_start)/2
+
+    # get genomic center position
+    bidir_center <- round(bidir_center_pos, digits = 0) + corAndPvalueOut_gene_bidirs$transcript2_start
+
+    # the distance calculation is from the center position of bidirectional to the start of the gene
+    corAndPvalueOut_gene_bidirs$distance <- bidir_center - corAndPvalueOut_gene_bidirs$transcript1_start
     
     return(corAndPvalueOut_gene_bidirs)
     

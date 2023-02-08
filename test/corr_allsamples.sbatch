@@ -2,13 +2,13 @@
 
 #SBATCH --job-name=test_corr_allsamples # Job name                                                                                                                           
 
-#SBATCH --mail-type=FAIL,END # Mail events (NONE, BEGIN, END, FAIL, ALL)                                                                                         
+#SBATCH --mail-type=FAIL # Mail events (NONE, BEGIN, END, FAIL, ALL)                                                                                         
 #SBATCH --mail-user=rutendo.sigauke@ucdenver.edu                                                                                             
 #SBATCH --nodes=1                                                                                                                                                
 #SBATCH --ntasks=1 # Num of CPU                                                                                                  
 #SBATCH --time=00:05:00 # Time limit                                                                                                                
 #SBATCH --partition short                                                                                                                                        
-#SBATCH --mem=5mb # Memory                                                                                                                                 
+#SBATCH --mem=2mb # Memory                                                                                                                                 
 #SBATCH --output=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/scripts/bidir_gene_pairs/test/e_and_o/%x_%j.out                                                                                                           
 #SBATCH --error=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/scripts/bidir_gene_pairs/test/e_and_o/%x_%j.err                                                                  
 
