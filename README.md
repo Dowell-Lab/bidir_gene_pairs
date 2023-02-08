@@ -107,3 +107,23 @@ Options:
 		Show this help message and exit
 
 ```
+
+### Example Output
+
+- transcript_1             : Gene id
+- transcript_2	           : Bidirectional id
+- pair_id	           : Gene and Bidirectional id 
+- pcc	                   : Pearsons correlation coefficient 
+- adj_p_BH	           : Adjusted p-value (Benjamini-Hochberg correction) 
+- pval	                   : P-value 
+- t	                   : T statistic 
+- nObs	                   : Number of observations in correlation analysis 
+- transcript1_start	   : Gene start coordinate
+- transcript1_end	   : Gene end coordinate
+- transcript1_biotype	   : Gene type
+- transcript2_start	   : Bidirectional transcript start
+- transcript2_end	   : Bidirectional transcript end 
+- transcript2_biotype	   : Bidirectional id (Tfit, dREG or Tfit&dREG) 
+- distance		   : Distance between the gene start and the bidirectional start coordinate
+- tissue		   : Tissue id based on metadata for tissue derived correlations (labelel `All_samples` if all samples are used)
+- percent_transcribed_both : Percent of the number of observed samples used in analysis
