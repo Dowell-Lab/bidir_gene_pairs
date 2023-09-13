@@ -128,16 +128,16 @@ cor_summary_stats <- function(corAndPvalueOut_list) {
     
 }
 
-##get mnetadata for pairs 
+##get metadata for pairs 
 cor_pair_metadata <- function(tpm_filtered_chrm, corAndPvalueOut_tibble) {
-    
+
     #' get metadata for all pairs
     #'
     #' @description Take tpm input file with metadata and the single tibble 
     #' file with correlations summary stats and combines to give a unified
     #' table with all information
     #' 
-    #' @param tpm_filtered_chrm : TPMs in a modified SAF format
+    #' @param tpm_filtered_chrm : TPMs in a BED6 format
     #'
     #' @param corAndPvalueOut_tibble : tibble file with corr and p-values
     #'
@@ -145,46 +145,77 @@ cor_pair_metadata <- function(tpm_filtered_chrm, corAndPvalueOut_tibble) {
     #' @usage cor_summary_stats(list_of_tibbles)
     #' @return A tibble with values for pairs from matrix list
     #' @export
-    
-    transcript_coords <- tpm_filtered_chrm[c(1,3,4,6)]
+
+    transcript_coords <- tpm_filtered_chrm[,1:6]
+    colnames(transcript_coords) <- c("chrom","start",
+                                     "stop","gene_transcript",
+                                     "score","strand")
+       
+    transcript_coords$transcript_type <- ifelse(grepl("chr*",
+                                                      transcript_coords$gene_transcript),
+                                                      "Bidirectional", "Gene")
 
     # subset transcript 1 coordinate data
-    transcript1_choords <- transcript_coords[transcript_coords$Geneid %in% corAndPvalueOut_tibble$transcript_1,]
-    colnames(transcript1_choords)[2:4] <- c("transcript1_start","transcript1_end","transcript1_biotype")
+    transcript1_choords <- transcript_coords[transcript_coords$gene_transcript %in% corAndPvalueOut_tibble$transcript_1,]
+    colnames(transcript1_choords) <- c("transcript1_chrom","transcript1_start",
+                                       "transcript1_stop",
+                                       "gene_transcript",
+                                       "transcript1_score",
+                                       "transcript1_strand",
+                                       "transcript1_type")
 
     # subset transcript 2 coordinate data
-    transcript2_choords <- transcript_coords[transcript_coords$Geneid %in% corAndPvalueOut_tibble$transcript_2,]
-    colnames(transcript2_choords)[2:4] <- c("transcript2_start","transcript2_end","transcript2_biotype")
+    transcript2_choords <- transcript_coords[transcript_coords$gene_transcript %in% corAndPvalueOut_tibble$transcript_2,]
+    colnames(transcript2_choords) <- c("transcript2_chrom","transcript2_start",
+                                       "transcript2_stop",
+                                       "gene_transcript",
+                                       "transcript2_score",
+                                       "transcript2_strand",
+                                       "transcript2_type")
 
     # combine transcript coordinates with correlations
     corAndPvalueOut_transcript1 <- dplyr::left_join(corAndPvalueOut_tibble,
                                              transcript1_choords,
-                                             by = c("transcript_1"="Geneid"))
+                                             by = c("transcript_1"="gene_transcript"))
 
     corAndPvalueOut_transcript1and2 <- dplyr::left_join(corAndPvalueOut_transcript1,
                                                 transcript2_choords,
-                                                by = c("transcript_2"="Geneid"))
+                                                by = c("transcript_2"="gene_transcript"))
 
     # remove redundant pairs and only report unique Gene-Bidirectional correlations
     # now transcript_1 are Genes and transcript_2 are Bidirectionals
-    corAndPvalueOut_gene_bidirs <- subset(corAndPvalueOut_transcript1and2, 
-                                      transcript1_biotype == 'Gene' & 
-                                      transcript2_biotype != 'Gene') 
+    corAndPvalueOut_gene_bidirs <- subset(corAndPvalueOut_transcript1and2,
+                                      transcript1_type == 'Gene' &
+                                      transcript2_type != 'Gene')
 
     # Now calculating the distance between genes and bidirectionals
     # relative center position of the bidirectional transcript
-    bidir_center_pos <- (corAndPvalueOut_gene_bidirs$transcript2_end - corAndPvalueOut_gene_bidirs$transcript2_start)/2
-    
+    bidir_center_pos <- (corAndPvalueOut_gene_bidirs$transcript2_stop - corAndPvalueOut_gene_bidirs$transcript2_start)/2
+
     # get genomic center position
     bidir_center <- round(bidir_center_pos, digits = 0) + corAndPvalueOut_gene_bidirs$transcript2_start
-    
+
     # the distance calculation is from the center position of bidirectional to the start of the gene
     corAndPvalueOut_gene_bidirs$distance <- bidir_center - corAndPvalueOut_gene_bidirs$transcript1_start
     
-    return(corAndPvalueOut_gene_bidirs)
+    #reordering data.frame as a bed 12 plus PCC output and distances
+    column_order <- c("transcript1_chrom","transcript1_start","transcript1_stop",
+                     "transcript_1", "transcript1_score", "transcript1_strand",
+                     "transcript2_chrom","transcript2_start","transcript2_stop",
+                     "transcript_2", "transcript2_score", "transcript2_strand",
+                     "pcc","pval","adj_p_BH","nObs","t","distance")
     
-}
+    corAndPvalueOut_gene_bidirs_bedformat <- corAndPvalueOut_gene_bidirs[, column_order]
+    
+    #annotate position of bidirectional relative to gene 
+    corAndPvalueOut_gene_bidirs_bedformat$position <- ifelse(corAndPvalueOut_gene_bidirs_bedformat$transcript1_strand=='+' & 
+                                                             corAndPvalueOut_gene_bidirs_bedformat$distance<0 |
+                                                             corAndPvalueOut_gene_bidirs_bedformat$transcript1_strand=='-' & 
+                                                             corAndPvalueOut_gene_bidirs_bedformat$distance>0, "upstream","downstream")
 
+    return(corAndPvalueOut_gene_bidirs_bedformat)
+
+}
 
 ##############################################
 ##matrix correlation by chromosome function ##
