@@ -230,8 +230,15 @@ cor_pair_metadata <- function(tpm_filtered_chrm, corAndPvalueOut_tibble) {
     bidir_center <- round(bidir_center_pos, digits = 0) + corAndPvalueOut_gene_bidirs$transcript2_start
 
     # the distance calculation is from the center position of bidirectional to the start of the gene
-    corAndPvalueOut_gene_bidirs$distance_tss <- bidir_center - corAndPvalueOut_gene_bidirs$transcript1_start
-    corAndPvalueOut_gene_bidirs$distance_tes <- bidir_center - corAndPvalueOut_gene_bidirs$transcript1_stop    
+    # here fixing the distance so that it is strand specific and relative to the genes start    
+    corAndPvalueOut_gene_bidirs$distance_tss <- ifelse(corAndPvalueOut_gene_bidirs$transcript1_strand=='+',
+                                                  bidir_center - corAndPvalueOut_gene_bidirs$transcript1_start,
+                                                  corAndPvalueOut_gene_bidirs$transcript1_stop - bidir_center)
+
+    corAndPvalueOut_gene_bidirs$distance_tes <- ifelse(corAndPvalueOut_gene_bidirs$transcript1_strand=='+',
+                                                  bidir_center - corAndPvalueOut_gene_bidirs$transcript1_stop,
+                                                  corAndPvalueOut_gene_bidirs$transcript1_start - bidir_center)
+
 
     #reordering data.frame as a bed 12 plus PCC output and distances
     column_order <- c("transcript1_chrom","transcript1_start","transcript1_stop",
@@ -242,11 +249,9 @@ cor_pair_metadata <- function(tpm_filtered_chrm, corAndPvalueOut_tibble) {
     
     corAndPvalueOut_gene_bidirs_bedformat <- corAndPvalueOut_gene_bidirs[, column_order]
     
-    #annotate position of bidirectional relative to gene 
-    corAndPvalueOut_gene_bidirs_bedformat$position <- ifelse(corAndPvalueOut_gene_bidirs_bedformat$transcript1_strand=='+' & 
-                                                             corAndPvalueOut_gene_bidirs_bedformat$distance_tss<0 |
-                                                             corAndPvalueOut_gene_bidirs_bedformat$transcript1_strand=='-' & 
-                                                             corAndPvalueOut_gene_bidirs_bedformat$distance_tss>0, "upstream","downstream")
+    #annotate position of bidirectional relative to gene
+    corAndPvalueOut_gene_bidirs_bedformat$position <- ifelse(corAndPvalueOut_gene_bidirs_bedformat$distance_tss < 0,
+                                                             "upstream","downstream")
 
     return(corAndPvalueOut_gene_bidirs_bedformat)
 
