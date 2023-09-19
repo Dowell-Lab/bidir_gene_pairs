@@ -41,7 +41,6 @@ if (is.null(opt$correlations)){
   stop("At least one argument must be supplied (input correlations).n", call.=FALSE)
 }
 
-print("START")
 #initalized paths and options for script
 chroms <- data.table::fread(opt$chr)
 output_folder <- opt$out
@@ -53,11 +52,27 @@ percent_transcribed <- opt$percent_trans
 rvalue_cutoff <- opt$rvalue
 adjusted_pvalue <- opt$adj_pvalue 
 
-print(paste("Minimum distance (bp)            :", as.character(opt$min_dist)))
-print(paste("|PCC| >                          :", as.character(opt$rvalue)))
-print(paste("Adjusted p-value <               :", as.character(opt$adj_pvalue)))
-print(paste("Minimun % samples in correlation :", as.character(opt$percent_trans)))
+sink(paste0(output_folder,"log_filter_",Sys.Date(),".txt"))
+cat("Filtering correlated bidirectional gene pairs")
+cat("\n")
 
+cat(paste0("Date: ", Sys.Date()))
+cat("\n")
+
+print("START")
+cat("\n")
+
+print(paste("Minimum distance (bp)            :", as.character(opt$min_dist)))
+cat("\n")
+
+print(paste("|PCC| >                          :", as.character(opt$rvalue)))
+cat("\n")
+
+print(paste("Adjusted p-value <               :", as.character(opt$adj_pvalue)))
+cat("\n")
+
+print(paste("Minimun % samples in correlation :", as.character(opt$percent_trans)))
+cat("\n")
 ####################################################################################
 ##Given an input correlation file, filter significant pairs based on distance etc ##
 ####################################################################################
@@ -86,7 +101,7 @@ get_sig_pairs <- function(gene_bidir_pairs, min_distance = minimum_distance, r_v
     
     #siginificant pairs
     gene_bidirs_sig <- subset(gene_bidir_pairs, 
-                         abs(distance) < min_distance &
+                         abs(distance_tss) < min_distance &
                          abs(pcc) > r_value &
                          adj_p_BH < adjusted_p &
 			 percent_transcribed_both > percent_transcribed ) 
@@ -122,11 +137,7 @@ processing_filters_by_chrNtissue <- function(chromosome_id, corr_path){
     #including date and chromosome ids to the file names
     final_path <- paste0(output_folder,
                          chromosome_id,
-                         '_significant',
-			 rvalue_cutoff,
-			 '_pairs_by_tissue_',
-                         Sys.Date(),
-                         '.tsv.gz' )
+                         '_significant_pairs_by_tissue.tsv.gz')
 
     data.table::fwrite(sig_corr_DT,
 			final_path,
@@ -139,24 +150,20 @@ processing_filters_by_chr <- function(chromosome_id, corr_path){
     
     ##get paths for the counts tables
     corr_files <- list.files(path=corr_path, 
-                              pattern=paste0("^pearson_correlation_",chromosome_id,"_"),
+                              pattern=paste0("^pearson_correlation_",chromosome_id),
                              full.names=TRUE)
     
     #load file
-    corr_DT <- data.table::fread(corr_files)	
+    corr_DT <- data.table::fread(corr_files[1])	
 
     #filter pairs
     sig_corr_DT <- get_sig_pairs(corr_DT)	
     
     #saving the final dataframes
-    #including date and chromosome ids to the file names
+    #including chromosome ids to the file names
     final_path <- paste0(output_folder,
                          chromosome_id,
-                         '_significant',
-			 rvalue_cutoff,
-			 '_pairs_',
-                         Sys.Date(),
-                         '.tsv.gz' )
+                         '_significant_pairs.tsv.gz' )
 
     data.table::fwrite(sig_corr_DT,
 			final_path,
@@ -165,19 +172,19 @@ processing_filters_by_chr <- function(chromosome_id, corr_path){
 }
 
 chromosome_list <- as.character(chroms$V1) 
+print(paste("Processing # chromosomes : ",as.character(length(chromosome_list)) ))
+cat("\n")
 
 # print some progress messages to stderr if "quietly" wasn't requested
 if ( opt$tissue ) { 
-    write("Getting significant pairs from tissue correlations\n", stderr()) 
-    print(paste("Processing # chromosomes : ",as.character(length(chromosome_list)) ))
+    print("Getting significant pairs from tissue correlations") 
     parallel::mclapply(chromosome_list, 
 	           processing_filters_by_chrNtissue, 
 		   corr_path = correlation_files,
 		   mc.cores = length(chromosome_list))
 
 } else {
-    write("Getting significant pairs from all sample correlations\n", stderr()) 
-    print(paste("Processing # chromosomes : ",as.character(length(chromosome_list)) ))
+    print("Getting significant pairs from all sample correlations")
     parallel::mclapply(chromosome_list, 
 	           processing_filters_by_chr, 
 		   corr_path = correlation_files,
@@ -186,8 +193,16 @@ if ( opt$tissue ) {
 
 }
 
+cat("\n")
 print("Session Summary")
+cat("\n")
 
 print(sessionInfo())
+cat("\n")
 
 print("DONE!")
+cat("\n")
+
+sink()
+
+

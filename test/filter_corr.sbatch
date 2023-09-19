@@ -9,17 +9,17 @@
 #SBATCH --time=00:10:00 # Time limit                                                                                                                
 #SBATCH --partition short                                                                                                                                        
 #SBATCH --mem=5mb # Memory                                                                                                                                 
-#SBATCH --output=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/scripts/bidir_gene_pairs/test/e_and_o/%x_%j.out                                                                                                           
-#SBATCH --error=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/scripts/bidir_gene_pairs/test/e_and_o/%x_%j.err                                                                  
+#SBATCH --output=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/bin/bidir_gene_pairs/test/e_and_o/%x_%j.out                                                                                                           
+#SBATCH --error=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/bin/bidir_gene_pairs/test/e_and_o/%x_%j.err                                                                  
 
 echo "BEGIN: Correlations..................."
 
 #get sample paths
 #working directory
-WD=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/scripts/bidir_gene_pairs
+WD=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/bin/bidir_gene_pairs
 
 #input to filtering script
-FILT_CORR=${WD}/R/filter_significant_pairs.R #filter_pairs_by_tissues.R
+FILT_CORR=${WD}/R/filter_significant_pairs.R 
 OUT=${WD}/test/out_significant/
 CORR=${WD}/test/out_tissues
 CORR_ALL=${WD}/test/out_allsamples

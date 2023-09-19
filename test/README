@@ -1,4 +1,21 @@
-Test file generated as below:
+#####################################################
+##Generated on 09-13-2023                           #
+#####################################################
+# Test file for tissue specific comparisons (breast)
+cat ~/projects/meta_analysis_qc/hg38/processed_data/counts/normalized/gene_bidir_tpm.tsv | grep 'gene_transcript\|ZFY:NM_003411.4\|chrY:3643962-3644134\|USP9Y:NM_004654.4\|chrY:13197730-13197884' >  test_tpms_samples.tsv 
+
+# Generate test files
+rusi2317@fiji-2.colorado.edu$ cat ~/projects/meta_analysis_qc/hg38/processed_data/counts/normalized/gene_bidir_tpm.tsv | grep -w 'chr1' | head -20 > test_head_tpm.tsv
+rusi2317@fiji-2.colorado.edu$ cat ~/projects/meta_analysis_qc/hg38/processed_data/counts/normalized/gene_bidir_tpm.tsv | grep -w 'chr1' | tail -20 > test_tail_tpm.tsv
+rusi2317@fiji-2.colorado.edu$ cat ~/projects/meta_analysis_qc/hg38/processed_data/counts/normalized/gene_bidir_tpm.tsv | grep 'gene_transcript' > test_names.tsv
+rusi2317@fiji-2.colorado.edu$ cat test_names.tsv test_head_tpm.tsv test_tail_tpm.tsv > test_tpms.tsv 
+
+# Test chromosomes
+cat /scratch/Shares/dowell/genomes/hg38/ncbi/hg38.genome | grep -w 'chrY' > test_chroms.tsv 
+
+#####################################################
+#OLD:Test file generated as below:                  #
+#####################################################
 
 rusi2317@fiji-1.colorado.edu$ cat ../../processed_data/final_counts/genes_bidirectionals_tpm_samples.tsv | grep -w 'chr1' | head -20 > test_head_tpm.tsv
 rusi2317@fiji-1.colorado.edu$ cat ../../processed_data/final_counts/genes_bidirectionals_tpm_samples.tsv | grep -w 'chr1' | tail -20 > test_tail_tpm.tsv

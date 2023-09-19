@@ -34,7 +34,6 @@ if (is.null(opt$tpms)){
   stop("At least one argument must be supplied (input tpms).n", call.=FALSE)
 }
 
-print("START")
 #initalized paths and options for script
 tpms_datatable <- data.table::fread(opt$tpms)
 metadata <- data.table::fread(opt$samplemeta)
@@ -42,11 +41,31 @@ chroms <- data.table::fread(opt$chr)
 nsamples <- ncol(tpms_datatable)
 output_folder <- opt$out
 
+##Start run Log
+sink(paste0(output_folder,"log_tissues_",Sys.Date(),".txt"))
+cat("Running co-transcription analyses: By Tissues")
+cat("\n")
+
+cat(paste0("Date: ", Sys.Date()))
+cat("\n")
+
+print("START")
+cat("\n")
+
 print(paste("Normalized Counts :", as.character(opt$tpms)))
+cat("\n")
+
 print(paste("Sample metadata   :", as.character(opt$samplemeta)))
+cat("\n")
+
 print(paste("Chromosome File   :", as.character(opt$chr)))
+cat("\n")
+
 print(paste("Output Directory  :", as.character(opt$out)))
+cat("\n")
+
 print(paste("Number of Samples :", as.character(nsamples)))
+cat("\n")
 
 ##############################################
 ##matrix correlation by chromosome function ##
@@ -211,22 +230,23 @@ cor_pair_metadata <- function(tpm_filtered_chrm, corAndPvalueOut_tibble) {
     bidir_center <- round(bidir_center_pos, digits = 0) + corAndPvalueOut_gene_bidirs$transcript2_start
 
     # the distance calculation is from the center position of bidirectional to the start of the gene
-    corAndPvalueOut_gene_bidirs$distance <- bidir_center - corAndPvalueOut_gene_bidirs$transcript1_start
-    
+    corAndPvalueOut_gene_bidirs$distance_tss <- bidir_center - corAndPvalueOut_gene_bidirs$transcript1_start
+    corAndPvalueOut_gene_bidirs$distance_tes <- bidir_center - corAndPvalueOut_gene_bidirs$transcript1_stop    
+
     #reordering data.frame as a bed 12 plus PCC output and distances
     column_order <- c("transcript1_chrom","transcript1_start","transcript1_stop",
                      "transcript_1", "transcript1_score", "transcript1_strand",
                      "transcript2_chrom","transcript2_start","transcript2_stop",
                      "transcript_2", "transcript2_score", "transcript2_strand",
-                     "pcc","pval","adj_p_BH","nObs","t","distance")
+                     "pcc","pval","adj_p_BH","nObs","t","distance_tss","distance_tes")
     
     corAndPvalueOut_gene_bidirs_bedformat <- corAndPvalueOut_gene_bidirs[, column_order]
     
     #annotate position of bidirectional relative to gene 
     corAndPvalueOut_gene_bidirs_bedformat$position <- ifelse(corAndPvalueOut_gene_bidirs_bedformat$transcript1_strand=='+' & 
-                                                             corAndPvalueOut_gene_bidirs_bedformat$distance<0 |
+                                                             corAndPvalueOut_gene_bidirs_bedformat$distance_tss<0 |
                                                              corAndPvalueOut_gene_bidirs_bedformat$transcript1_strand=='-' & 
-                                                             corAndPvalueOut_gene_bidirs_bedformat$distance>0, "upstream","downstream")
+                                                             corAndPvalueOut_gene_bidirs_bedformat$distance_tss>0, "upstream","downstream")
 
     return(corAndPvalueOut_gene_bidirs_bedformat)
 
@@ -259,11 +279,11 @@ transcript_pearsons_by_chromosome_tissue <- function(chromosome_id, tissue_name)
     print(paste0("Tissue metadata ",tissue_name," : ", as.character(nrow(metadata_tissue))))
    
     #get a subset of genes and bidirs by chromosome id
-    tpms_chrm <- subset(tpms_datatable, Chr == chromosome_id)
+    tpms_chrm <- subset(tpms_datatable, chrom == chromosome_id)
     
     #filter samples that match the tissue of interest
     tpms_chrms_tissue <- t(tpms_chrm[ ,colnames(tpms_chrm) %in% metadata_tissue$sample_name, with=FALSE]) 
-    colnames(tpms_chrms_tissue) <- tpms_chrm$Geneid
+    colnames(tpms_chrms_tissue) <- tpms_chrm$gene_transcript
 
     # log transform the matrix of tpms
     tpms_chrms_tissue_log10 <- log(tpms_chrms_tissue+1, base=10)
@@ -311,8 +331,6 @@ transcript_pearsons_by_chromosome_tissue <- function(chromosome_id, tissue_name)
                          chromosome_id,
                          '_', 
                          tissue_name_nospace,
-                         '_',
-                         Sys.Date(),
                          '.tsv.gz' )
     
     data.table::fwrite(corAndPvalueOut_pairs,
@@ -325,18 +343,25 @@ transcript_pearsons_by_chromosome_tissue <- function(chromosome_id, tissue_name)
 
 chromosome_list <- as.character(chroms$V1) 
 print(paste("Processing # chromosomes : ",as.character(length(chromosome_list)) ))
+cat("\n")
 
 #get samples used in analyses
 tissue_counts <- as.data.frame(table(as.character(metadata_analyzed$tissue)))
 tissue_list <- as.character(subset(tissue_counts, Freq>15)$Var1)
 print(paste("Processing # tissues : ",as.character(length(tissue_list))))
+cat("\n")
 
 cores_requested <- makeCluster(1, type="FORK")
-parallel::clusterMap(cores_requested, transcript_pearsons_by_chromosome_tissue, chromosome_list, tissue_list)
+parallel::clusterMap(cores_requested, transcript_pearsons_by_chromosome_tissue, chromosome = chromosome_list, tissue_name = tissue_list)
 stopCluster(cores_requested) 
 
-print("Session Summary")
+cat("Session Summary")
+cat("\n")
 
 print(sessionInfo())
+cat("\n")
 
-print("DONE!")
+cat("DONE!")
+cat("\n")
+
+sink()

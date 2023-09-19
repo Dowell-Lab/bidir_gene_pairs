@@ -8,14 +8,14 @@
 #SBATCH --ntasks=1 # Num of CPU                                                                                                  
 #SBATCH --time=00:05:00 # Time limit                                                                                                                
 #SBATCH --partition short                                                                                                                                        
-#SBATCH --mem=2mb # Memory                                                                                                                                 
-#SBATCH --output=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/scripts/bidir_gene_pairs/test/e_and_o/%x_%j.out                                                                                                           
-#SBATCH --error=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/scripts/bidir_gene_pairs/test/e_and_o/%x_%j.err                                                                  
+#SBATCH --mem=5mb # Memory                                                                                                                                 
+#SBATCH --output=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/bin/bidir_gene_pairs/test/e_and_o/%x_%j.out                                                                                                           
+#SBATCH --error=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/bin/bidir_gene_pairs/test/e_and_o/%x_%j.err                                                                  
 
 echo "BEGIN: Correlations..................."
-WD=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/scripts/bidir_gene_pairs
+WD=/scratch/Users/rusi2317/projects/meta_analysis_qc/hg38/bin/bidir_gene_pairs
 WGCNA_CORR=${WD}/R/bidir_gene_correlations_tissues.R
-TPMS=${WD}/test/test_tpms.tsv 
+TPMS=${WD}/test/test_tpms_samples.tsv #${WD}/test/test_tpms.tsv ##use 15GB if using all the sata
 CHR=${WD}/test/test_chroms.tsv
 OUT=${WD}/test/out_tissues/
 META=${WD}/test/230131_db_output.tsv 

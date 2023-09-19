@@ -32,17 +32,35 @@ if (is.null(opt$tpms)){
   stop("At least one argument must be supplied (input tpms).n", call.=FALSE)
 }
 
-print("START")
 #initalized paths and options for script
 tpms_datatable <- data.table::fread(opt$tpms)
 chroms <- data.table::fread(opt$chr)
 nsamples <- ncol(tpms_datatable)
 output_folder <- opt$out
 
+##Start run Log
+sink(paste0(output_folder,"log_all_",Sys.Date(),".txt"))
+
+cat("Running co-transcription analyses")
+cat("\n")
+
+cat(paste0("Date: ", Sys.Date()))
+cat("\n")
+
+print("START")
+cat("\n")
+
 print(paste("Normalized Counts :", as.character(opt$tpms)))
+cat("\n")
+
 print(paste("Chromosome File   :", as.character(opt$chr)))
+cat("\n")
+
 print(paste("Output Directory  :", as.character(opt$out)))
+cat("\n")
+
 print(paste("Number of Samples :", as.character(nsamples)))
+cat("\n")
 
 ##long format of pairwise matrix matrix 
 restructure_cor_matrix <- function(matrix){
@@ -81,7 +99,6 @@ restructure_cor_matrix <- function(matrix){
     matrix_df_noNA$pair_id <- paste0(matrix_df_noNA$transcript_1,':',
                                      matrix_df_noNA$transcript_2)
     
-    print(dim(matrix_df_noNA))
     return(matrix_df_noNA)
     
 }
@@ -196,22 +213,23 @@ cor_pair_metadata <- function(tpm_filtered_chrm, corAndPvalueOut_tibble) {
     bidir_center <- round(bidir_center_pos, digits = 0) + corAndPvalueOut_gene_bidirs$transcript2_start
 
     # the distance calculation is from the center position of bidirectional to the start of the gene
-    corAndPvalueOut_gene_bidirs$distance <- bidir_center - corAndPvalueOut_gene_bidirs$transcript1_start
+    corAndPvalueOut_gene_bidirs$distance_tss <- bidir_center - corAndPvalueOut_gene_bidirs$transcript1_start
+    corAndPvalueOut_gene_bidirs$distance_tes <- bidir_center - corAndPvalueOut_gene_bidirs$transcript1_stop
     
     #reordering data.frame as a bed 12 plus PCC output and distances
     column_order <- c("transcript1_chrom","transcript1_start","transcript1_stop",
                      "transcript_1", "transcript1_score", "transcript1_strand",
                      "transcript2_chrom","transcript2_start","transcript2_stop",
                      "transcript_2", "transcript2_score", "transcript2_strand",
-                     "pcc","pval","adj_p_BH","nObs","t","distance")
+                     "pcc","pval","adj_p_BH","nObs","t","distance_tss","distance_tes")
     
     corAndPvalueOut_gene_bidirs_bedformat <- corAndPvalueOut_gene_bidirs[, column_order]
     
     #annotate position of bidirectional relative to gene 
     corAndPvalueOut_gene_bidirs_bedformat$position <- ifelse(corAndPvalueOut_gene_bidirs_bedformat$transcript1_strand=='+' & 
-                                                             corAndPvalueOut_gene_bidirs_bedformat$distance<0 |
+                                                             corAndPvalueOut_gene_bidirs_bedformat$distance_tss<0 |
                                                              corAndPvalueOut_gene_bidirs_bedformat$transcript1_strand=='-' & 
-                                                             corAndPvalueOut_gene_bidirs_bedformat$distance>0, "upstream","downstream")
+                                                             corAndPvalueOut_gene_bidirs_bedformat$distance_tss>0, "upstream","downstream")
 
     return(corAndPvalueOut_gene_bidirs_bedformat)
 
@@ -220,7 +238,7 @@ cor_pair_metadata <- function(tpm_filtered_chrm, corAndPvalueOut_tibble) {
 ##############################################
 ##matrix correlation by chromosome function ##
 ##############################################
-transcript_pearsons_by_chromosome <- function(chromosome){
+transcript_pearsons_by_chromosome <- function(tpms_datatable, chromosome, nsamples){
     
     #' calculate pearson's correlations for all transcripts in input
     #' 
@@ -238,12 +256,12 @@ transcript_pearsons_by_chromosome <- function(chromosome){
     #' @export
     
     #get a subset of genes and bidirs by chromosome id
-    tpms_chrm <- as.data.frame(subset(tpms_datatable, Chr == chromosome))
+    tpms_chrm <- as.data.frame(subset(tpms_datatable, chrom == chromosome))
     
     #transpose the dataframe (ie. rows are samples and columns are transcripts)
     #this will also convert dataframe to matrix
     tpms_chrm_t <- t(tpms_chrm[c(7:nsamples)])
-    colnames(tpms_chrm_t) <- tpms_chrm$Geneid
+    colnames(tpms_chrm_t) <- tpms_chrm$gene_transcript
     
     #log transform the normalized tpm counts(base 10)
     ##NOTE: running with adding 1s and converting 0s to NA
@@ -285,8 +303,6 @@ transcript_pearsons_by_chromosome <- function(chromosome){
     final_path <- paste0(outdir,
                          'pearson_correlation_', 
                          chromosome,
-                         '_',
-                         Sys.Date(),
                          '.tsv.gz' )
     
     data.table::fwrite(corAndPvalueOut_pairs,
@@ -296,10 +312,17 @@ transcript_pearsons_by_chromosome <- function(chromosome){
 
 chromosome_list <- as.character(chroms$V1) 
 
-parallel::mclapply(chromosome_list, transcript_pearsons_by_chromosome, mc.cores = length(chromosome_list))
+parallel::mclapply(chromosome_list, transcript_pearsons_by_chromosome,
+		   tpms_datatable = tpms_datatable, nsamples = nsamples, 
+		   mc.cores = length(chromosome_list))
 
-print("Session Summary")
+cat("Session Summary")
+cat("\n")
 
 print(sessionInfo())
+cat("\n")
 
-print("DONE!")
+cat("DONE!")
+cat("\n")
+
+sink()
