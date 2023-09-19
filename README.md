@@ -110,20 +110,27 @@ Options:
 
 ### Example Output
 
-- transcript_1             : Gene id
-- transcript_2	           : Bidirectional id
-- pair_id	           : Gene and Bidirectional id 
-- pcc	                   : Pearsons correlation coefficient 
-- adj_p_BH	           : Adjusted p-value (Benjamini-Hochberg correction) 
-- pval	                   : P-value 
-- t	                   : T statistic 
-- nObs	                   : Number of observations in correlation analysis 
+The output is a form of a bed12 file where the first 6 columns are gene coodinates and the following 6 are bidirectional coordinates. Remaining columns are the summary statistics for correlation and the relationship between the gene and bidirectional.
+
+- transcript1_chrom	   : Gene chromosome  
 - transcript1_start	   : Gene start coordinate
-- transcript1_end	   : Gene end coordinate
-- transcript1_biotype	   : Gene type
-- transcript2_start	   : Bidirectional transcript start
-- transcript2_end	   : Bidirectional transcript end 
-- transcript2_biotype	   : Bidirectional id (Tfit, dREG or Tfit&dREG) 
-- distance		   : Distance between the gene start and the bidirectional start coordinate
-- tissue		   : Tissue id based on metadata for tissue derived correlations (labelel `All_samples` if all samples are used)
+- transcript1_stop         : Gene stop coordinate
+- transcript_1	           : Gene id 
+- transcript1_score	   : Gene score (. since none was assigned)
+- transcript1_strand 	   : Gene strand
+- transcript2_chrom 	   : Bidirectional chromosome
+- transcript2_start 	   : Bidirectional start coordinate
+- transcript2_stop 	   : Bidirectional stol coordinate
+- transcript_2             : Bidirectional id
+- transcript2_score 	   : Bidirectional score (i.e. the number of papers that support a bidirectional from muMerge)
+- transcript2_strand 	   : Bidirectional strand (. since these are not stranded)
+- pcc                      : Pearsons correlation coefficient
+- pval                     : P-value
+- adj_p_BH                 : Adjusted p-value (Benjamini-Hochberg correction)
+- nObs                     : Number of observations in correlation analysis
+- t                        : T statistic
+- distance_tss 		   : Distance between the gene start (TSS) and the bidirectional start coordinate 
+- distance_tes 		   : Distance between the gene stop (TES) and the bidirectional start coordinate
+- position 		   : Is the bidirectional upstream or downstream of the TSS
+- tissue 		   : Tissue id based on metadata for tissue derived correlations (labeled `All_samples` if all samples are used)
 - percent_transcribed_both : Percent of the number of observed samples used in analysis
