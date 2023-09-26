@@ -104,7 +104,7 @@ get_sig_pairs <- function(gene_bidir_pairs, min_distance = minimum_distance, r_v
                          abs(distance_tss) < min_distance &
                          abs(pcc) > r_value &
                          adj_p_BH < adjusted_p &
-			 percent_transcribed_both > percent_transcribed ) 
+			 percent_transcribed_both > perc_trans) 
     
     return(gene_bidirs_sig)
     
