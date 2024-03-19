@@ -32,6 +32,8 @@ if (is.null(opt$tpm_file)){
   stop("At least one argument must be supplied (input correlations).n", call.=FALSE)
 }
 
+date_time <- format(Sys.time(), "%Y_%B_%d_%H_%M_%S")
+
 tpms_DT <- data.table::fread(opt$tpm_file)
 genes <- data.table::fread(opt$gene_counts)
 chroms <- tpms_DT$chrom

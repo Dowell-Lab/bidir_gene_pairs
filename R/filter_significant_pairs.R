@@ -52,7 +52,9 @@ percent_transcribed <- opt$percent_trans
 rvalue_cutoff <- opt$rvalue
 adjusted_pvalue <- opt$adj_pvalue 
 
-sink(paste0(output_folder,"log_filter_",Sys.Date(),".txt"))
+#add log file
+date_time <- format(Sys.time(), "%Y_%B_%d_%H_%M_%S")
+sink(paste0(output_folder,"log_filter_",date_time,".txt"))
 cat("Filtering correlated bidirectional gene pairs")
 cat("\n")
 

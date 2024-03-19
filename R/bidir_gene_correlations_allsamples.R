@@ -39,7 +39,8 @@ nsamples <- ncol(tpms_datatable)
 output_folder <- opt$out
 
 ##Start run Log
-sink(paste0(output_folder,"log_all_",Sys.Date(),".txt"))
+date_time <- format(Sys.time(), "%Y_%B_%d_%H_%M_%S")
+sink(paste0(output_folder,"log_all_",date_time,".txt"))
 
 cat("Running co-transcription analyses")
 cat("\n")

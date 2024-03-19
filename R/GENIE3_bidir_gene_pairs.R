@@ -51,9 +51,10 @@ minimum_distance <- opt$dopas
 seed_val <- opt$seed
 nObs <- opt$nobs
 
+#start a log file
 sink_file_name <- base::basename(correlation_files)
-
-sink(paste0(output_folder,"log_filter_",sink_file_name,"_",Sys.Date(),".txt"))
+date_time <- format(Sys.time(), "%Y_%B_%d_%H_%M_%S")
+sink(paste0(output_folder,"log_filter_",sink_file_name,"_",date_time,".txt"))
 cat("Filtering correlated bidirectional gene pairs")
 cat("\n")
 
