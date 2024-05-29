@@ -361,26 +361,57 @@ transcript_pearsons_by_chromosome_tissue <- function(chromosome_id, tissue_name)
     ##add tissue summary of counts
     corAndPvalueOut_pairs$tissue <- tissue_name
     corAndPvalueOut_pairs$percent_transcribed_both <- (corAndPvalueOut_pairs$nObs/nrow(metadata_tissue))*100
-    
-    #saving the final dataframes
-    #including date and chromosome ids to the file names
-    outdir <- output_folder 
-    
-    tissue_name_nospace <- gsub(" ", "-", tissue_name)
-    
-    final_path <- paste0(outdir,
-                         'pearson_correlation_', 
-                         chromosome_id,
-                         '_', 
-                         tissue_name_nospace,
-                         '.tsv.gz' )
-    
-    data.table::fwrite(corAndPvalueOut_pairs,
-                       final_path,
-                       sep='\t')
+
+    return(corAndPvalueOut_pairs)
 
     }
 
+
+process_correlations <- function(gene_bidir_tpm_df, 
+                                 metadata_df,
+                                 gene_name, 
+                                 tissue_name,
+                                 window=1000000 
+                                 ){
+    
+    gene_a <- gene_bidir_tpm_df[grepl(gene_name,
+                                      gene_bidir_tpm_df$gene_transcript),]
+                     
+    get_transcripts_a <- get_transcripts_in_window(gene_name = gene_a$gene_transcript, 
+                                          gene_tpms_df = gene_bidir_tpm_df, 
+                                          window = window)
+
+    gene_a_pcc <- transcript_pearsons_by_chromosome_tissue(tpms_datatable = get_transcripts_a,
+                                                           metadata = metadata_df,       
+                                                           chromosome_id = gene_a$chrom, 
+                                                           tissue_name = tissue_name)
+   
+    return(gene_a_pcc)
+    
+}
+
+
+save_pairs <- function(pairs_dt, 
+                       output_folder,
+                       tissue_name,
+                       chromosome_id){
+    
+    #saving the final dataframes
+    #including chromosome ids to the file names
+    tissue_name_nospace <- gsub(" ", "-", tissue_name)
+
+    final_path <- paste0(output_folder,
+                         'pearson_correlation_',
+                         chromosome_id,
+                         '_',
+                         tissue_name_nospace,
+                         '.tsv.gz' )
+
+    data.table::fwrite(pairs_dt,
+                       final_path,
+                       sep='\t')
+    
+}
 
 
 chromosome_list <- as.character(chroms$V1) 
