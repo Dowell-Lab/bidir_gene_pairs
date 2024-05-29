@@ -77,15 +77,51 @@ sample_ids <- colnames(tpms_datatable[c(7:nsamples)])
 metadata_analyzed <- metadata[metadata$sample_name %in% sample_ids,]
 print(dim(metadata_analyzed))
 
+
+get_transcripts_in_window <- function(gene_name, gene_tpms_df, window = 1000000){
+    
+    ##get transcripts including genes within the 1MB window gene
+    window <- window
+    
+    ##filter gene of interest
+    gene_counts <- subset(gene_tpms_df, gene_transcript == gene_name)
+    gene_chrom <- gene_counts$chrom
+    gene_start <- gene_counts$start
+    gene_stop <- gene_counts$stop
+    gene_strand <- gene_counts$strand
+    
+    if (gene_strand == "+"){
+    
+        #get bidirectional transcripts in the specified window
+        gene_bidir_window_tpms_df <- subset(gene_tpms_df,
+                                     chrom == gene_chrom &
+                                     start > gene_start - window & 
+                                     start < gene_start + window)
+        } else {
+        
+        #get bidirectional transcripts in the specified window
+        gene_bidir_window_tpms_df <- subset(gene_tpms_df,
+                                     chrom == gene_chrom &
+                                     stop > gene_stop - window & 
+                                     stop < gene_stop + window)
+    }
+
+    bidir_window_tpms_df <- gene_bidir_window_tpms_df[grepl("chr",gene_bidir_window_tpms_df$gene_transcript),]
+
+    gene_bidir_tpms_df <- rbind(gene_counts, bidir_window_tpms_df)
+    
+    return(gene_bidir_tpms_df)
+}
+
 ##get long format for matrix
-restructure_cor_matrix <- function(matrix){
+restructure_cor_matrix <- function(in_matrix){
     
     #' get long format for matrix output from WGCNAs corAndPvalue() function
     #' 
     #' @description Summarize the matrix in 'transcript1, transcript2, value' 
     #' format
     #' 
-    #' @param matrix : pairwise comparisons in matrix format
+    #' @param in_matrix : pairwise comparisons in matrix format
     #'
     #'
     #' @usage restructure_cor_matrix(matrix)
@@ -93,7 +129,7 @@ restructure_cor_matrix <- function(matrix){
     #' @export
     
     #convert to dataframe
-    matrix_df <- as.data.frame(matrix)
+    matrix_df <- as.data.frame(in_matrix)
     matrix_df$transcript_1 <- colnames(matrix_df)
     
     #change the structure of the dataframe to 3 column dataframe
