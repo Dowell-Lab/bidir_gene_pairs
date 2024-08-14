@@ -4,6 +4,8 @@
 ##load packages ##
 ##################
 
+.libPaths( c( .libPaths(), "/Users/rusi2317/R/x86_64-redhat-linux-gnu-library/3.6") )
+
 suppressMessages(library(data.table)) ## load files into R faster
 suppressMessages(library(optparse)) ##adding arguments
 
