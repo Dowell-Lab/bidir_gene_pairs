@@ -101,7 +101,7 @@ get_transcripts_in_window <- function(gene_name, gene_tpms_df, window = window){
     gene_stop <- gene_counts$stop
     gene_strand <- gene_counts$strand
     
-    if (gene_strand == "+"){
+    if (isTRUE(gene_strand) && gene_strand == "+"){
     
         #get bidirectional transcripts in the specified window
         gene_bidir_window_tpms_df <- subset(gene_tpms_df,
