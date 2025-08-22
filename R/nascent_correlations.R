@@ -436,6 +436,8 @@ process_by_gene <- function(gene_id, gene_bidir_tpm_df, metadata_celltype, tissu
                                                            chromosome_id = gene_a$chrom, 
                                                            tissue_name=tissue)
     pairs_pcc <- gene_a_pcc
+    return(pairs_pcc)
+
                      },
              error = function(e){
                  message('Gene pairs in this tissue do not exist!')
@@ -445,8 +447,6 @@ process_by_gene <- function(gene_id, gene_bidir_tpm_df, metadata_celltype, tissu
                  message('All done, quitting.')
              }
             )
-    
-    return(pairs_pcc)
     
 }
 
