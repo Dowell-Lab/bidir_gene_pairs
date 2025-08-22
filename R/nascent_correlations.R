@@ -423,7 +423,7 @@ process_by_gene <- function(gene_id, gene_bidir_tpm_df, metadata_celltype, tissu
     
     # get gene to process
     # using the tryCatch for exceptions
-    tryCatch(expr = {gene_a <- gene_bidir_tpm_df[grepl(gene_id,
+    tryCatch(expr = {gene_a <- gene_bidir_tpm_df[grepl(gsub("([()])","\\\\\\1", gene_id),
                                                        gene_bidir_tpm_df$gene_transcript),]
 
     
@@ -523,7 +523,7 @@ pearson_pairs <- mclapply(gene_name,
 ##----------------------------------------
 
 #merge the list of gene pairs
-pearson_pairs_dt <- do.call(rbind, pearson_pairs)
+pearson_pairs_dt <- data.table::rbindlist(pearson_pairs, use.names=TRUE, fill=TRUE)
 
 #filter to keep thos within specified window
 pearson_pairs_filt_dt <- subset(pearson_pairs_dt, nObs >= nlimit & abs(distance_tss) <= window)
