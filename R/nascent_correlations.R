@@ -19,7 +19,7 @@ suppressMessages(library(reshape2)) ## restructure matrix
 option_list = list(
     make_option(c("-t", "--tpms"), type="character", default=NULL,
                 help="path to TPM normalized counts", metavar="character"),
-    make_option(c("-m", "--samplemeta"), type="character", default=NULL,
+    make_option(c("-m", "--samplemeta"), type="character", default=FALSE,
                 help="path to metadata table for all samples", metavar="character"),
     make_option(c("-i", "--chr_id"), type="character", default="chrY",
                 help="chromosome to process", metavar="character"),
@@ -62,7 +62,18 @@ nlimit <- opt$nlimit
 
 #files and paths
 tpms_datatable <- data.table::fread(opt$tpms, nThread=1)
-metadata <- data.table::fread(opt$samplemeta, nThread=1)
+
+#update names for the bed6 counts 
+bed6_colnames <- c("chrom","start","stop","gene_transcript","score","strand",
+                     colnames(tpms_datatable)[7:ncol(tpms_datatable)])
+colnames(tpms_datatable) <- bed6_colnames
+
+
+if (opt$samplemeta == FALSE){
+	metadata <- FALSE 
+	}else{	
+	metadata <- data.table::fread(opt$samplemeta, nThread=1)
+ }
 
 ###########################################
 ##Processing functions                   ##
@@ -321,7 +332,7 @@ cor_pair_metadata <- function(tpm_filtered_chrm, corAndPvalueOut_tibble) {
 ## Process correlations
 ##-----------------------------------------
 
-##put it all together and calculate correlations
+##put it all together and calculate correlations for tissue specific
 transcript_pearsons_by_chromosome_tissue <- function(tpms_datatable, metadata, chromosome_id, tissue_name){
     
     #' calculate pearson's correlations for all transcripts in input
@@ -341,7 +352,7 @@ transcript_pearsons_by_chromosome_tissue <- function(tpms_datatable, metadata, c
 
     nsamples <- ncol(tpms_datatable)
     ##get metadata for the samples analyzed
-    sample_ids <- colnames(tpms_datatable[c(7:nsamples)])
+    sample_ids <- colnames(tpms_datatable[,7:nsamples])
     metadata_analyzed <- metadata[metadata$sample_name %in% sample_ids,]
 
     # get metadata for specific tissue of interest
@@ -396,6 +407,86 @@ transcript_pearsons_by_chromosome_tissue <- function(tpms_datatable, metadata, c
 
     }
 
+## calculate correlations for all samples
+transcript_pearsons_by_chromosome <- function(tpms_datatable, chromosome_id){
+    
+    #' calculate pearson's correlations for all transcripts in input
+    #' 
+    #' @description This function will calculate person's R and significance for 
+    #' input normalized counts  
+    #' 
+    #' @param tpms_datatable path i.e. path to normalized counts
+    #'
+    #' @param chromosome id based on the input list of chromosomes 
+    #'
+    #' @param output_folder output directory
+    #'
+    #' @usage transcript_pearsons_by_chromosome(tpms_datatable, chromosome, output_folder)
+    #' @return A data.frame with all pairwise correlations and significance
+    #' @export
+
+    nsamples <- ncol(tpms_datatable)
+    ##get metadata for the samples analyzed
+    sample_ids <- colnames(tpms_datatable[,7:nsamples])
+    #metadata_analyzed <- metadata[metadata$sample_name %in% sample_ids,]
+
+    # get metadata for specific tissue of interest
+    #metadata_tissue <- subset(metadata_analyzed, tissue == tissue_name)
+    #print(paste0("Tissue metadata ",tissue_name," : ", as.character(nrow(metadata_tissue))))
+    #get a subset of genes and bidirs by chromosome id
+    tpms_chrm <- subset(tpms_datatable, chrom == chromosome_id)
+    
+    #filter samples that match the tissue of interest
+    #tpms_chrms_tissue <- t(tpms_chrm[ ,colnames(tpms_chrm) %in% metadata_tissue$sample_name, with=FALSE]) 
+    #colnames(tpms_chrms_tissue) <- tpms_chrm$gene_transcript
+    
+    # transpose the counts table 
+    tpms_chrm_t <- t(tpms_chrm[, colnames(tpms_chrm) %in% sample_ids, with = FALSE])
+    colnames(tpms_chrm_t) <- tpms_chrm$gene_transcript
+
+    # log transform the matrix of tpms
+    tpms_chrms_log10 <- log(tpms_chrm_t+1, base=10)
+
+    # make sure that samples with 0 counts are excluded from the log() transformation
+    #log transform the normalized tpm counts(base 10)
+    ##NOTE: running with adding 1s and converting 0s to NA
+     
+    tpms_chrms_log10_NAs <- tpms_chrms_log10
+
+    tpms_chrms_log10_NAs[tpms_chrms_log10_NAs == 0] <- NA
+    #tpms_chrms_tissue_log10_NAs <- dplyr::na_if(tpms_chrms_tissue_log10, 0)  
+
+    ########################################################
+    ##Using WGCNA calculate correlations and p-values for ##
+    ##relavant samples with trancriptio                   ##
+    ########################################################
+    ##calculated pcc, pvalue, z stat, t stat and number of observations (i.e.)
+    ##samples with both genes and bidirectionals transcribed         
+    corAndPvalueOut <- WGCNA::corAndPvalue(tpms_chrms_log10_NAs, 
+                                           use="pairwise.complete.obs")
+    
+    ##restructure all the matrix outputs long formats 
+    corAndPvalueOut_matrix_list <- lapply(corAndPvalueOut, restructure_cor_matrix)
+    
+    ##combine all summary stats all in one tibble
+    corAndPvalueOut_all_tibble <- cor_summary_stats(corAndPvalueOut_matrix_list)
+    #print(dim(corAndPvalueOut_all_tibble))
+    #print(head(corAndPvalueOut_all_tibble))
+    
+    ##remove redundant pairs and add metadata
+    ##bidir and gene pair ids, distances 
+    corAndPvalueOut_pairs <- cor_pair_metadata(tpms_chrm, 
+                                               corAndPvalueOut_all_tibble)
+    
+    ##add tissue summary of counts
+    #corAndPvalueOut_pairs$tissue <- tissue_name
+    corAndPvalueOut_pairs$percent_transcribed_both <- (corAndPvalueOut_pairs$nObs/length(sample_ids))*100
+    
+    return(corAndPvalueOut_pairs)
+
+    }
+
+
 ##-----------------------------------------
 ## Process by gene
 ##-----------------------------------------
@@ -430,12 +521,18 @@ process_by_gene <- function(gene_id, gene_bidir_tpm_df, metadata_celltype, tissu
     get_transcripts_a <- get_transcripts_in_window(gene_name = gene_a$gene_transcript, 
                                           gene_tpms_df = gene_bidir_tpm_df, 
                                           window = window)
-
+    if (metadata_celltype == FALSE){
+    gene_a_pcc <- transcript_pearsons_by_chromosome(tpms_datatable = get_transcripts_a,
+                                                    chromosome_id = gene_a$chrom)
+    pairs_pcc <- gene_a_pcc
+	}
+	else {
     gene_a_pcc <- transcript_pearsons_by_chromosome_tissue(tpms_datatable = get_transcripts_a,
                                                            metadata = metadata_celltype, 
                                                            chromosome_id = gene_a$chrom, 
                                                            tissue_name=tissue)
     pairs_pcc <- gene_a_pcc
+}
     return(pairs_pcc)
 
                      },
